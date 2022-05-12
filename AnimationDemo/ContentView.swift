@@ -23,10 +23,14 @@ struct ContentView: View {
                 .rotationEffect(Angle.degrees(degrees))
                 .onReceive(timer) { _ in
                     withAnimation(.linear(duration: 2)){
+                        animationState = .running
                         self.degrees += 360
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.85) {
-                        if (animationState == .stopped) {
+                        if (animationState == .stopped || animationState == .stopping) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                                animationState = .stopped
+                            }
                             withAnimation(.easeOut(duration: 4)) {
                                 self.degrees += 360
                             }
@@ -34,20 +38,24 @@ struct ContentView: View {
                     }
                 }
             Button("Toggle") {
-                if animationState == .running {
-                    timer.connect().cancel()
-                    animationState = .stopped
-                } else {
+                switch animationState {
+                case .stopped:
+                    animationState = .starting
                     withAnimation(.easeIn(duration: 4)) {
                         self.degrees += 360
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.88) {
                         timer = Timer.publish(every: 2, on: .main, in: .common)
                         _ = timer.connect()
-                            }
-                    animationState = .running
+                    }
+                case .running:
+                    timer.connect().cancel()
+                    animationState = .stopping
+                default:
+                    print("Unknown state")
                 }
             }
+            .disabled(animationState == .starting || animationState == .stopping)
         }
     }
 }
